@@ -11,6 +11,8 @@
   let selectedTraining = null
   let errorMessage = ''
   let successMessage = ''
+  let editingTrainingId = null
+  let editingTrainingName = ''
 
   // Lade Trainings und Settings beim App-Start
   onMount(() => {
@@ -39,6 +41,45 @@
       currentView = 'list'
       saveTrainings(trainings)
       showSuccess('Training erstellt!')
+    }
+  }
+
+  function startEditTraining(trainingId, trainingName) {
+    editingTrainingId = trainingId
+    editingTrainingName = trainingName
+  }
+
+  function saveEditTraining() {
+    if (editingTrainingName.trim()) {
+      const training = trainings.find(t => t.id === editingTrainingId)
+      if (training) {
+        training.name = editingTrainingName.trim()
+        trainings = trainings
+        saveTrainings(trainings)
+        showSuccess('Training aktualisiert!')
+      }
+    }
+    editingTrainingId = null
+    editingTrainingName = ''
+  }
+
+  function cancelEditTraining() {
+    editingTrainingId = null
+    editingTrainingName = ''
+  }
+
+  function duplicateTraining(trainingId) {
+    const originalTraining = trainings.find(t => t.id === trainingId)
+    if (originalTraining) {
+      const duplicatedTraining = {
+        id: Date.now(),
+        name: originalTraining.name + ' (Kopie)',
+        exercises: JSON.parse(JSON.stringify(originalTraining.exercises)),
+        settings: JSON.parse(JSON.stringify(originalTraining.settings))
+      }
+      trainings = [...trainings, duplicatedTraining]
+      saveTrainings(trainings)
+      showSuccess('Training dupliziert!')
     }
   }
 
@@ -168,19 +209,49 @@
         <ul>
           {#each trainings as training (training.id)}
             <li class="training-list-item">
-              <button on:click={() => viewTraining(training)} class="training-item">
-                <span class="training-name">{training.name}</span>
-                <span class="exercise-count">
-                  {training.exercises.length} Übungen
-                </span>
-              </button>
-              <button
-                on:click={() => deleteTraining(training.id)}
-                class="delete-button"
-                title="Training löschen"
-              >
-                🗑
-              </button>
+              {#if editingTrainingId === training.id}
+                <div class="edit-training-form">
+                  <input
+                    type="text"
+                    value={editingTrainingName}
+                    on:input={(e) => (editingTrainingName = e.target.value)}
+                    class="edit-training-input"
+                    autofocus
+                  />
+                  <button on:click={saveEditTraining} class="btn-save">✓</button>
+                  <button on:click={cancelEditTraining} class="btn-cancel">✕</button>
+                </div>
+              {:else}
+                <button on:click={() => viewTraining(training)} class="training-item">
+                  <span class="training-name">{training.name}</span>
+                  <span class="exercise-count">
+                    {training.exercises.length} Übungen
+                  </span>
+                </button>
+                <div class="training-actions">
+                  <button
+                    on:click={() => startEditTraining(training.id, training.name)}
+                    class="action-button edit-button"
+                    title="Training bearbeiten"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    on:click={() => duplicateTraining(training.id)}
+                    class="action-button duplicate-button"
+                    title="Training duplizieren"
+                  >
+                    📋
+                  </button>
+                  <button
+                    on:click={() => deleteTraining(training.id)}
+                    class="action-button delete-button"
+                    title="Training löschen"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              {/if}
             </li>
           {/each}
         </ul>
@@ -391,20 +462,78 @@
     font-size: 14px;
   }
 
-  .delete-button {
+  .training-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .action-button {
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: 16px;
     cursor: pointer;
-    padding: 8px 12px;
+    padding: 8px;
     border-radius: 6px;
     transition: all 0.2s;
-    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .edit-button:hover {
+    background: #e7f3ff;
+    color: #0066cc;
+  }
+
+  .duplicate-button:hover {
+    background: #fff3e0;
+    color: #ff9800;
   }
 
   .delete-button:hover {
     background: #ffebee;
     color: #dc3545;
+  }
+
+  .edit-training-form {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .edit-training-input {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #0066cc;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+
+  .edit-training-input:focus {
+    outline: none;
+  }
+
+  .btn-save,
+  .btn-cancel {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .btn-save:hover {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .btn-cancel:hover {
+    background: #f8d7da;
+    color: #721c24;
   }
 
   .form-container {
@@ -489,6 +618,20 @@
 
     .exercise-count {
       margin-top: 8px;
+    }
+
+    .training-actions {
+      width: 100%;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .edit-training-form {
+      flex-direction: column;
+    }
+
+    .edit-training-input {
+      width: 100%;
     }
   }
 </style>

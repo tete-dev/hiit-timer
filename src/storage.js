@@ -328,3 +328,129 @@ export function generateUnifiedExportFilename() {
   
   return `hiit-data-${year}-${month}-${day}-${hours}${minutes}${seconds}.json`
 }
+
+
+// ==================== NEUE FUNKTIONEN ====================
+
+/**
+ * Aktualisiere einen Trainingsnamen
+ * @param {Array} trainings - Array von Trainings
+ * @param {Number} trainingId - ID des zu aktualisierenden Trainings
+ * @param {String} newName - Neuer Trainingsnamen
+ * @returns {Array} Aktualisiertes Trainings-Array
+ */
+export function updateTrainingName(trainings, trainingId, newName) {
+  const updated = trainings.map(t =>
+    t.id === trainingId ? { ...t, name: newName } : t
+  )
+  saveTrainings(updated)
+  return updated
+}
+
+/**
+ * Dupliziere ein Training mit allen Übungen und Einstellungen
+ * @param {Array} trainings - Array von Trainings
+ * @param {Number} trainingId - ID des zu duplizierenden Trainings
+ * @param {String} suffix - Suffix für den Namen (default: " (Kopie)")
+ * @returns {Array} Aktualisiertes Trainings-Array mit Kopie
+ */
+export function duplicateTraining(trainings, trainingId, suffix = ' (Kopie)') {
+  const trainingToDuplicate = trainings.find(t => t.id === trainingId)
+  if (!trainingToDuplicate) {
+    console.error('Training nicht gefunden:', trainingId)
+    return trainings
+  }
+
+  // Deep copy des Trainings
+  const duplicated = JSON.parse(JSON.stringify(trainingToDuplicate))
+  
+  // Generiere neue ID und Update Name
+  duplicated.id = Date.now() + Math.random()
+  duplicated.name = trainingToDuplicate.name + suffix
+
+  // Generiere neue IDs für Übungen
+  duplicated.exercises = duplicated.exercises.map(ex => ({
+    ...ex,
+    id: Date.now() + Math.random()
+  }))
+
+  const updated = [...trainings, duplicated]
+  saveTrainings(updated)
+  return updated
+}
+
+/**
+ * Aktualisiere einen Übungsnamen
+ * @param {Array} trainings - Array von Trainings
+ * @param {Number} trainingId - ID des Trainings
+ * @param {Number} exerciseId - ID der zu aktualisierenden Übung
+ * @param {String} newName - Neuer Übungsname
+ * @returns {Array} Aktualisiertes Trainings-Array
+ */
+export function updateExerciseName(trainings, trainingId, exerciseId, newName) {
+  const updated = trainings.map(t => {
+    if (t.id === trainingId) {
+      return {
+        ...t,
+        exercises: t.exercises.map(ex =>
+          ex.id === exerciseId ? { ...ex, name: newName } : ex
+        )
+      }
+    }
+    return t
+  })
+  saveTrainings(updated)
+  return updated
+}
+
+/**
+ * Verschiebe eine Übung nach oben (Index - 1)
+ * @param {Array} trainings - Array von Trainings
+ * @param {Number} trainingId - ID des Trainings
+ * @param {Number} exerciseId - ID der zu verschiebenden Übung
+ * @returns {Array} Aktualisiertes Trainings-Array
+ */
+export function moveExerciseUp(trainings, trainingId, exerciseId) {
+  const updated = trainings.map(t => {
+    if (t.id === trainingId) {
+      const exercises = [...t.exercises]
+      const index = exercises.findIndex(ex => ex.id === exerciseId)
+      
+      if (index > 0) {
+        // Vertausche mit vorheriger Übung
+        [exercises[index - 1], exercises[index]] = [exercises[index], exercises[index - 1]]
+      }
+      
+      return { ...t, exercises }
+    }
+    return t
+  })
+  saveTrainings(updated)
+  return updated
+}
+
+/**
+ * Verschiebe eine Übung nach unten (Index + 1)
+ * @param {Array} trainings - Array von Trainings
+ * @param {Number} trainingId - ID des Trainings
+ * @param {Number} exerciseId - ID der zu verschiebenden Übung
+ * @returns {Array} Aktualisiertes Trainings-Array
+ */
+export function moveExerciseDown(trainings, trainingId, exerciseId) {
+  const updated = trainings.map(t => {
+    if (t.id === trainingId) {
+      const exercises = [...t.exercises]
+      const index = exercises.findIndex(ex => ex.id === exerciseId)
+      
+      if (index < exercises.length - 1) {
+        // Vertausche mit nächster Übung
+        [exercises[index], exercises[index + 1]] = [exercises[index + 1], exercises[index]]
+      }
+      
+      return { ...t, exercises }
+    }
+    return t
+  })
+  saveTrainings(updated)
+  return updated
+}

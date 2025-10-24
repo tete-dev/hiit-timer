@@ -10,6 +10,8 @@
   let newExerciseName = ''
   let showTimer = false
   let showSettings = false
+  let editingExerciseId = null
+  let editingExerciseName = ''
 
   // Stelle sicher, dass settings existieren und alle neuen Felder gesetzt sind
   if (!training.settings) {
@@ -43,8 +45,51 @@
     }
   }
 
+  function startEditExercise(exerciseId, exerciseName) {
+    editingExerciseId = exerciseId
+    editingExerciseName = exerciseName
+  }
+
+  function saveEditExercise() {
+    if (editingExerciseName.trim()) {
+      const exercise = training.exercises.find(ex => ex.id === editingExerciseId)
+      if (exercise) {
+        exercise.name = editingExerciseName.trim()
+        training.exercises = training.exercises
+        dispatch('update')
+      }
+    }
+    editingExerciseId = null
+    editingExerciseName = ''
+  }
+
+  function cancelEditExercise() {
+    editingExerciseId = null
+    editingExerciseName = ''
+  }
+
   function deleteExercise(id) {
     training.exercises = training.exercises.filter((ex) => ex.id !== id)
+  }
+
+  function moveExerciseUp(index) {
+    if (index > 0) {
+      const temp = training.exercises[index]
+      training.exercises[index] = training.exercises[index - 1]
+      training.exercises[index - 1] = temp
+      training.exercises = training.exercises
+      dispatch('update')
+    }
+  }
+
+  function moveExerciseDown(index) {
+    if (index < training.exercises.length - 1) {
+      const temp = training.exercises[index]
+      training.exercises[index] = training.exercises[index + 1]
+      training.exercises[index + 1] = temp
+      training.exercises = training.exercises
+      dispatch('update')
+    }
   }
 
   function goBack() {
@@ -183,16 +228,47 @@
             </p>
 
             <ul class="exercises-list">
-              {#each training.exercises as exercise (exercise.id)}
-                <li class="exercise-item">
-                  <div class="exercise-info">
-                    <span class="exercise-name">{exercise.name}</span>
-                    <span class="exercise-duration">{training.settings.exerciseDuration}s</span>
-                  </div>
-                  <button on:click={() => deleteExercise(exercise.id)} class="delete-btn">
-                    🗑
-                  </button>
-                </li>
+              {#each training.exercises as exercise, index (exercise.id)}
+                {#if editingExerciseId === exercise.id}
+                  <li class="exercise-item editing">
+                    <input
+                      type="text"
+                      value={editingExerciseName}
+                      on:input={(e) => (editingExerciseName = e.target.value)}
+                      class="exercise-name-input"
+                      autofocus
+                    />
+                    <button on:click={saveEditExercise} class="btn-save-exercise">✓</button>
+                    <button on:click={cancelEditExercise} class="btn-cancel-exercise">✕</button>
+                  </li>
+                {:else}
+                  <li class="exercise-item">
+                    <div class="exercise-info">
+                      <span class="exercise-name" on:click={() => startEditExercise(exercise.id, exercise.name)}>
+                        {exercise.name}
+                      </span>
+                      <span class="exercise-duration">{training.settings.exerciseDuration}s</span>
+                    </div>
+                    <div class="exercise-actions">
+                      {#if index > 0}
+                        <button on:click={() => moveExerciseUp(index)} class="move-btn" title="Nach oben verschieben">
+                          ↑
+                        </button>
+                      {/if}
+                      {#if index < training.exercises.length - 1}
+                        <button on:click={() => moveExerciseDown(index)} class="move-btn" title="Nach unten verschieben">
+                          ↓
+                        </button>
+                      {/if}
+                      <button on:click={() => startEditExercise(exercise.id, exercise.name)} class="edit-btn" title="Bearbeiten">
+                        ✏️
+                      </button>
+                      <button on:click={() => deleteExercise(exercise.id)} class="delete-btn" title="Löschen">
+                        🗑️
+                      </button>
+                    </div>
+                  </li>
+                {/if}
               {/each}
             </ul>
           </div>
@@ -379,6 +455,47 @@
     margin-bottom: 8px;
   }
 
+  .exercise-item.editing {
+    background: #e8f4fd;
+    border-color: #0066cc;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .exercise-name-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #0066cc;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .exercise-name-input:focus {
+    outline: none;
+  }
+
+  .btn-save-exercise,
+  .btn-cancel-exercise {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .btn-save-exercise:hover {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .btn-cancel-exercise:hover {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
   .exercise-info {
     display: flex;
     justify-content: space-between;
@@ -390,6 +507,15 @@
   .exercise-name {
     font-weight: 500;
     color: #333;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .exercise-name:hover {
+    background: #e8f4fd;
+    color: #0066cc;
   }
 
   .exercise-duration {
@@ -397,24 +523,39 @@
     font-weight: 500;
     min-width: 40px;
     text-align: right;
+    font-size: 14px;
   }
 
+  .exercise-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .move-btn,
+  .edit-btn,
   .delete-btn {
     background: none;
     border: none;
-    font-size: 18px;
+    font-size: 14px;
     cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .move-btn:hover {
+    background: #e7f3ff;
+    color: #0066cc;
+  }
+
+  .edit-btn:hover {
+    background: #e7f3ff;
+    color: #0066cc;
   }
 
   .delete-btn:hover {
     background: #ffebee;
-    border-radius: 4px;
+    color: #dc3545;
   }
 
   .btn-start-timer {
@@ -497,14 +638,25 @@
       gap: 5px;
     }
 
-    .delete-btn {
-      align-self: flex-end;
+    .exercise-actions {
+      width: 100%;
+      justify-content: flex-start;
       margin-top: 10px;
+      gap: 4px;
     }
 
     .summary-info {
       flex-direction: column;
       gap: 10px;
+    }
+
+    .exercise-item.editing {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .exercise-name-input {
+      width: 100%;
     }
   }
 </style>
