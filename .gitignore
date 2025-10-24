@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.svelte-kit/
+.env
+.env.local
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
